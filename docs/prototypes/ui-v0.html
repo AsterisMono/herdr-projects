@@ -1,0 +1,1110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Projects · Web UI v0 prototype</title>
+<style>
+  :root {
+    --bg: #f0eee9;
+    --panel: #fafaf8;
+    --paper: #ffffff;
+    --line: #e5e1da;
+    --line-soft: #eceae5;
+    --text: #2c2b28;
+    --text-2: #65625c;
+    --text-3: #9a968e;
+    --hover: rgba(45, 38, 25, .045);
+    --selected: rgba(45, 38, 25, .075);
+    --accent: #2f6bff;
+    --accent-bg: #e8eeff;
+    --accent-text: #2352cc;
+    --amber: #d18212;
+    --amber-bg: #fcf1dd;
+    --amber-text: #82500a;
+    --green: #22a06b;
+    --dot: #bab6ad;
+    --sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; margin: 0; }
+  body { font: 13px/1.45 var(--sans); color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased; }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; cursor: pointer; text-align: left; }
+  code { font-family: var(--mono); font-size: 11.5px; }
+  :focus { outline: none; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 7px; }
+
+  .app {
+    height: 100vh;
+    display: grid;
+    grid-template-columns: 264px 380px minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas: "side banner banner" "side coord detail";
+  }
+
+  /* Column headers share one height so the three columns read as one window. */
+  .col-head {
+    height: 46px; flex: none;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .col-title { display: flex; align-items: center; gap: 8px; min-width: 0; font-weight: 600; }
+  .col-title span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .col-title.muted { color: var(--text-3); font-weight: 500; }
+  .col-tag { flex: none; font-size: 11.5px; color: var(--text-3); padding: 1px 8px; border: 1px solid var(--line); border-radius: 999px; }
+
+  /* Left: Projects and Agents */
+  .sidebar { grid-area: side; min-height: 0; display: flex; flex-direction: column; background: var(--bg); border-right: 1px solid var(--line); }
+  .sidebar .col-head { border-bottom: 0; padding: 0 18px; }
+  .sidebar h1 { margin: 0; font-size: 13px; font-weight: 600; color: var(--text-2); }
+  .projects { flex: 1; min-height: 0; overflow: auto; margin: 0; padding: 0 8px 12px; list-style: none; }
+  .projects ul { list-style: none; margin: 1px 0 6px; padding: 0; }
+  .side-empty { margin: 8px 10px; color: var(--text-3); }
+
+  .project-row, .agent-row, .more {
+    width: 100%; display: flex; align-items: center; gap: 8px; border-radius: 7px;
+  }
+  .project-row { height: 32px; padding: 0 8px 0 10px; font-weight: 500; }
+  .project-row:hover, .agent-row:hover, .more:hover { background: var(--hover); }
+  .project-row.is-selected { background: var(--selected); }
+  .row-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .badge {
+    flex: none; min-width: 22px; height: 20px; padding: 0 6px; border-radius: 6px;
+    display: grid; place-items: center;
+    background: rgba(45, 38, 25, .07); color: var(--text-2);
+    font-size: 11.5px; font-variant-numeric: tabular-nums;
+  }
+  .project-row.is-selected .badge { background: rgba(45, 38, 25, .09); }
+  .attn { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--amber); }
+
+  .agent-row { height: 30px; padding: 0 8px 0 13px; color: var(--text-2); }
+  .agent-row.is-selected { background: var(--paper); color: var(--text); box-shadow: 0 0 0 1px var(--line-soft), 0 1px 2px rgba(0, 0, 0, .04); }
+  .when { flex: none; font-size: 12px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+  .st-blocked .when { color: var(--amber-text); }
+  .more { height: 28px; padding: 0 8px 0 35px; color: var(--text-3); font-size: 12px; }
+  .agent-empty { height: 28px; display: flex; align-items: center; padding-left: 35px; color: var(--text-3); font-size: 12px; }
+
+  .mono {
+    flex: none; width: 17px; height: 17px; border-radius: 5px;
+    display: grid; place-items: center;
+    font-size: 10px; font-weight: 700; line-height: 1;
+  }
+  .mono-lg { width: 40px; height: 40px; border-radius: 11px; font-size: 18px; }
+
+  /* Status icons */
+  .si { flex: none; width: 14px; height: 14px; display: grid; place-items: center; color: var(--text-3); }
+  .si i { display: block; }
+  .si-blue, .si-amber, .si-grey { width: 7px; height: 7px; border-radius: 50%; }
+  .si-blue { background: var(--accent); }
+  .si-amber { background: var(--amber); }
+  .si-grey { background: var(--dot); }
+  .si-ring { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--dot); }
+  .si-dash { width: 8px; height: 1.5px; border-radius: 1px; background: var(--dot); }
+  .spinner { width: 14px; height: 14px; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; animation: spin .9s steps(8) infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .side-foot {
+    position: relative; flex: none;
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 10px 12px 10px 18px;
+    border-top: 1px solid var(--line);
+    font-size: 12px; color: var(--text-3);
+  }
+  .conn-line { display: flex; align-items: center; gap: 7px; }
+  .conn { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+  .conn.bad { background: var(--amber); }
+
+  /* Centre: Coordinator stub */
+  .coordinator { grid-area: coord; min-height: 0; display: flex; flex-direction: column; background: var(--panel); border-right: 1px solid var(--line); }
+  .coord-body { flex: 1; min-height: 0; overflow: auto; padding: 44px 28px 24px; }
+  .hero { text-align: center; }
+  .hero .mono-lg { margin: 0 auto 12px; }
+  .hero h2 { margin: 0; font-size: 16px; font-weight: 600; }
+  .hero .path { margin: 3px 0 0; font-family: var(--mono); font-size: 12px; color: var(--text-3); }
+  .hero .summary { margin: 12px 0 0; color: var(--text-2); font-size: 12.5px; }
+  .sum-blocked { color: var(--amber-text); }
+  .note { margin: 28px 0 0; padding: 13px 15px; background: var(--paper); border: 1px solid var(--line-soft); border-radius: 10px; }
+  .note h3 { margin: 0 0 3px; font-size: 12.5px; font-weight: 600; }
+  .note p { margin: 0; color: var(--text-2); }
+  .facts { margin: 22px 2px 0; display: grid; grid-template-columns: auto 1fr; gap: 8px 18px; font-size: 12.5px; }
+  .facts-title { margin: 22px 2px 0; font-size: 12px; font-weight: 600; color: var(--text-3); }
+  .facts + .facts-title, .facts-title + .facts { margin-top: 10px; }
+  .facts dt { color: var(--text-3); }
+  .facts dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+  .coord-foot {
+    flex: none; display: flex; align-items: center; justify-content: center; gap: 7px;
+    padding: 12px 16px; border-top: 1px solid var(--line-soft);
+    color: var(--text-3); font-size: 12px;
+  }
+  .coord-foot svg { width: 14px; height: 14px; }
+
+  /* Right: Agent detail */
+  .detail { grid-area: detail; min-width: 0; min-height: 0; display: flex; flex-direction: column; background: var(--panel); }
+  .detail h2 { margin: 0; min-width: 0; font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pill {
+    flex: none; display: inline-flex; align-items: center; gap: 6px;
+    height: 22px; padding: 0 9px 0 7px; border-radius: 999px;
+    background: #efede8; color: var(--text-2);
+    font-size: 12px; font-weight: 500;
+  }
+  .pill .si, .pill .spinner { width: 12px; height: 12px; }
+  .pill.st-working { color: var(--text); }
+  .pill.st-blocked, .pill.st-unreachable { background: var(--amber-bg); color: var(--amber-text); }
+  .pill.st-done { background: var(--accent-bg); color: var(--accent-text); }
+  .pill.st-unreachable { padding-left: 9px; }
+  .detail-meta { flex: none; padding: 11px 18px 12px; }
+  .meta-line { margin: 0; display: flex; flex-wrap: wrap; align-items: center; row-gap: 4px; color: var(--text-3); font-size: 12px; }
+  .meta-line code { color: var(--text-2); }
+  .sep { margin: 0 7px; }
+  .copy { display: inline-grid; place-items: center; width: 20px; height: 20px; margin-left: 3px; border-radius: 5px; color: var(--text-3); vertical-align: middle; }
+  .copy:hover { background: var(--hover); color: var(--text); }
+  .copy svg { width: 13px; height: 13px; }
+  .callout { margin: 10px 0 0; padding: 7px 11px; border-radius: 8px; font-size: 12.5px; background: #f1efea; color: var(--text-2); }
+  .callout.warn { background: var(--amber-bg); color: var(--amber-text); }
+
+  .term {
+    position: relative; flex: 1; min-height: 0;
+    display: flex; flex-direction: column;
+    margin: 0 18px 18px;
+    background: var(--paper); border: 1px solid var(--line); border-radius: 10px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .03);
+    overflow: hidden;
+  }
+  .term-screen { flex: 1; min-height: 0; overflow: auto; }
+  .term-screen:focus-visible { outline: none; box-shadow: inset 0 0 0 2px rgba(47, 107, 255, .35); border-radius: 10px 10px 0 0; }
+  .term pre { margin: 0; padding: 12px 14px; font: 12px/1.5 var(--mono); color: #2a2926; white-space: pre; }
+  .term.is-dim pre { opacity: .4; }
+  .term-overlay { position: absolute; inset: 0 0 29px 0; display: grid; place-items: center; pointer-events: none; }
+  .term-overlay div { padding: 9px 14px; border-radius: 9px; background: rgba(255, 255, 255, .94); border: 1px solid var(--line); box-shadow: 0 4px 16px rgba(0, 0, 0, .06); color: var(--text-2); font-size: 12.5px; }
+  .term-bar {
+    flex: none; height: 29px;
+    display: flex; align-items: center; gap: 14px;
+    padding: 0 12px; border-top: 1px solid var(--line-soft); background: #fcfcfb;
+    color: var(--text-3); font-size: 11.5px;
+  }
+  .term-bar .term-size { margin-left: auto; font-family: var(--mono); font-size: 11px; }
+  .live-dot { display: inline-block; width: 6px; height: 6px; margin-right: 6px; border-radius: 50%; background: var(--green); vertical-align: 1px; }
+
+  /* Light terminal palette for the mock output */
+  .t-b { font-weight: 700; }
+  .t-d { color: #8c8980; }
+  .t-g { color: #17804a; }
+  .t-r { color: #c03a34; }
+  .t-y { color: #a0660a; }
+  .t-c { color: #1f6db0; }
+  .t-m { color: #94409f; }
+  .t-a { color: #cc5f2c; }
+  .t-s { color: #2352cc; font-weight: 700; }
+
+  .empty { flex: 1; display: grid; place-items: center; padding: 24px; text-align: center; }
+  .empty-box { max-width: 300px; }
+  .empty-icon { width: 34px; height: 34px; margin: 0 auto 12px; display: grid; place-items: center; border-radius: 9px; background: var(--paper); border: 1px solid var(--line); color: var(--text-3); }
+  .empty-icon svg { width: 16px; height: 16px; }
+  .empty h3 { margin: 0; font-size: 13px; font-weight: 600; color: var(--text-2); }
+  .empty p { margin: 4px 0 0; font-size: 12.5px; color: var(--text-3); }
+
+  .banner {
+    grid-area: banner;
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 16px;
+    background: var(--amber-bg); color: var(--amber-text);
+    border-bottom: 1px solid #f0dfbf;
+    font-size: 12.5px;
+  }
+  .banner svg { width: 15px; height: 15px; flex: none; }
+  .banner .retry { opacity: .7; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 24px; z-index: 20;
+    transform: translate(-50%, 6px);
+    padding: 8px 14px; border-radius: 8px;
+    background: #2c2b28; color: #fff; font-size: 12.5px;
+    opacity: 0; pointer-events: none; transition: opacity .15s, transform .15s;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  /* Prototype-only controls: dashed so they never read as product UI. */
+  .proto-toggle { flex: none; height: 24px; padding: 0 9px; border: 1px dashed #c9c4ba; border-radius: 999px; color: var(--text-3); font-size: 11.5px; }
+  .proto-toggle:hover, .proto-toggle[aria-expanded="true"] { color: var(--text-2); border-color: #aaa498; }
+  .proto-panel {
+    position: absolute; left: 8px; right: 8px; bottom: calc(100% + 6px); z-index: 10;
+    display: flex; flex-direction: column; gap: 2px;
+    padding: 8px; background: var(--paper);
+    border: 1px dashed #c9c4ba; border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .1);
+  }
+  .proto-title { margin: 2px 6px 6px; font-size: 12px; font-weight: 600; color: var(--text-2); }
+  .proto-title span { font-weight: 400; color: var(--text-3); }
+  .proto-panel button, .proto-panel label { display: flex; align-items: center; gap: 8px; padding: 6px 7px; border-radius: 7px; font-size: 12.5px; color: var(--text); cursor: pointer; }
+  .proto-panel button:hover:not(:disabled), .proto-panel label:hover { background: var(--hover); }
+  .proto-panel button:disabled { color: var(--text-3); cursor: default; }
+  .proto-panel input { margin: 0; accent-color: var(--accent); }
+  .proto-note { margin: 4px 7px 2px; font-size: 11.5px; color: var(--text-3); }
+
+  @media (max-width: 1100px) {
+    .app { grid-template-columns: 248px minmax(0, 1fr); grid-template-areas: "side banner" "side detail"; }
+    .coordinator { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .spinner { animation: none; }
+    .toast { transition: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" aria-label="Projects">
+    <header class="col-head"><h1>Projects</h1></header>
+    <ul class="projects" id="projects"></ul>
+    <footer class="side-foot">
+      <span class="conn-line" id="conn"></span>
+      <button class="proto-toggle" id="proto-toggle" aria-expanded="false" aria-controls="proto-panel">Prototype</button>
+      <div class="proto-panel" id="proto-panel" hidden>
+        <p class="proto-title">Prototype controls <span>· not part of the UI</span></p>
+        <button data-act="cycle">Next Herdr status for this agent</button>
+        <button data-act="close">Close this agent's pane</button>
+        <label><input type="checkbox" name="herdr"> Herdr unreachable</label>
+        <label><input type="checkbox" name="empty"> No projects in the record</label>
+        <button data-act="reset">Reset mock data</button>
+        <p class="proto-note">Mock data only. Nothing leaves this page.</p>
+      </div>
+    </footer>
+  </aside>
+  <div class="banner" id="banner" role="status" hidden>
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M8 1.8 14.6 13.5H1.4L8 1.8Z" stroke-linejoin="round"/><path d="M8 6.2v3.3M8 11.4v.1" stroke-linecap="round"/></svg>
+    <span>Can't reach Herdr. Statuses and terminals are paused until it's back.</span>
+    <span class="retry">Retrying…</span>
+  </div>
+  <main class="coordinator" id="coordinator" aria-label="Coordinator"></main>
+  <section class="detail" id="detail" aria-label="Agent"></section>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+  'use strict';
+
+  const MIN = 60e3, HOUR = 60 * MIN, DAY = 24 * HOUR;
+  const T0 = Date.now();
+  const ago = ms => new Date(T0 - ms).toISOString();
+  const HOME = '/home/you';
+  const LIMIT = 5;
+  const CYCLE = ['working', 'blocked', 'done', 'idle', 'unknown'];
+
+  // The SQLite record: the locked columns and nothing else.
+  const seedDb = () => ({
+    projects: [
+      { id: 1, name: 'Website v2', path: HOME + '/dev/website', herdr_workspace_id: 'w1', created_at: ago(12 * DAY) },
+      { id: 2, name: 'Gardener', path: HOME + '/dev/gardener', herdr_workspace_id: 'w2', created_at: ago(5 * DAY) },
+      { id: 3, name: 'Browser', path: HOME + '/dev/browser', herdr_workspace_id: 'w3', created_at: ago(3 * DAY + 2 * HOUR) },
+      { id: 4, name: 'Design System', path: HOME + '/dev/design-system', herdr_workspace_id: 'w5', created_at: ago(20 * HOUR) },
+    ],
+    runs: [
+      { id: 1, project_id: 2, herdr_pane_id: 'w2:p1', started_at: ago(3 * DAY) },
+      { id: 2, project_id: 1, herdr_pane_id: 'w1:p1', started_at: ago(2 * DAY + 4 * HOUR) },
+      { id: 3, project_id: 1, herdr_pane_id: 'w1:p2', started_at: ago(DAY + 2 * HOUR) },
+      { id: 4, project_id: 1, herdr_pane_id: 'w1:p3', started_at: ago(5 * HOUR + 8 * MIN) },
+      { id: 5, project_id: 1, herdr_pane_id: 'w1:p5', started_at: ago(3 * HOUR + 20 * MIN) },
+      { id: 6, project_id: 1, herdr_pane_id: 'w1:p6', started_at: ago(2 * HOUR + 10 * MIN) },
+      { id: 7, project_id: 3, herdr_pane_id: 'w3:p1', started_at: ago(HOUR + 30 * MIN) },
+      { id: 8, project_id: 1, herdr_pane_id: 'w1:p7', started_at: ago(55 * MIN) },
+      { id: 9, project_id: 1, herdr_pane_id: 'w1:p8', started_at: ago(41 * MIN) },
+      { id: 10, project_id: 2, herdr_pane_id: 'w2:p3', started_at: ago(25 * MIN) },
+      { id: 11, project_id: 1, herdr_pane_id: 'w1:p9', started_at: ago(18 * MIN) },
+      { id: 12, project_id: 3, herdr_pane_id: 'w3:p2', started_at: ago(12 * MIN) },
+      { id: 13, project_id: 2, herdr_pane_id: 'w2:p4', started_at: ago(8 * MIN) },
+    ],
+  });
+
+  // What Herdr would report per pane, read live and never stored.
+  // A missing key is a pane Herdr no longer has; `agent: null` is a pane whose agent exited.
+  const seedHerdr = () => ({
+    'w1:p1': { tab_label: 'Image audit', agent: null },
+    'w1:p3': { tab_label: null, agent: { name: 'try-new-nav', kind: 'gemini', status: 'unknown' } },
+    'w1:p5': { tab_label: 'Update footer links', agent: { name: 'footer-links', kind: 'opencode', status: 'idle' } },
+    'w1:p6': { tab_label: 'Tune Lighthouse score', agent: { name: 'tune-lighthouse', kind: 'claude', status: 'done' } },
+    'w1:p7': { tab_label: 'Migrate forms to the v2 API', agent: { name: 'migrate-forms', kind: 'claude', status: 'blocked' } },
+    'w1:p8': { tab_label: 'Finalize testing site', agent: { name: 'finalize-testing-site', kind: 'codex', status: 'working' } },
+    'w1:p9': { tab_label: 'Fix bug report', agent: { name: 'fix-bug-report', kind: 'claude', status: 'working' } },
+    'w2:p1': { tab_label: 'Watering schedule tests', agent: { name: 'watering-tests', kind: 'claude', status: 'idle' } },
+    'w2:p3': { tab_label: 'Build gardening rows', agent: { name: 'gardening-rows', kind: 'claude', status: 'done' } },
+    'w2:p4': { tab_label: 'Seed plant catalog', agent: { name: 'seed-catalog', kind: 'codex', status: 'working' } },
+    'w3:p1': { tab_label: 'Profile startup', agent: { name: 'profile-startup', kind: 'claude', status: 'done' } },
+    'w3:p2': { tab_label: 'Fix tab restore crash', agent: { name: 'tab-restore-crash', kind: 'claude', status: 'blocked' } },
+  });
+
+  // Canned terminal output. {{k|text}} colours text: b bold, d dim, g green, r red, y yellow, c cyan, m magenta, a accent, s selected.
+  const TOKEN = /\{\{(\w)\|(.*?)\}\}/g;
+  const visible = s => s.replace(TOKEN, '$2');
+  const box = (rows, width) => [
+    `{{d|╭${'─'.repeat(width - 2)}╮}}`,
+    ...rows.map(r => `{{d|│}} ${r}${' '.repeat(Math.max(0, width - 4 - [...visible(r)].length))} {{d|│}}`),
+    `{{d|╰${'─'.repeat(width - 2)}╯}}`,
+  ];
+  const claude = dir => [`{{a|✻}} {{b|Claude Code}}  {{d|${dir}}}`, ''];
+  const codex = dir => [`{{b|>_ Codex}}  {{d|${dir}}}`, ''];
+
+  const SCRIPTS = {
+    'w1:p9': {
+      activity: 'Running tests', turn: 252,
+      frame: [
+        ...claude('~/dev/website'),
+        '{{d|>}} Fix the bug report from #bugs: signing up drops the "+" from email',
+        '  addresses, so alice+test@example.com arrives as "alice test".',
+        '',
+        '{{a|⏺}} {{b|Read}}(src/forms/signup.ts)',
+        '{{d|  ⎿  Read 142 lines}}',
+        '',
+        '{{a|⏺}} {{b|Search}}(pattern: "buildQuery", path: "src")',
+        '{{d|  ⎿  Found 3 files}}',
+        '',
+        '{{a|⏺}} {{c|buildQuery()}} joins values without encoding them, and a form body',
+        '  reads {{c|+}} as a space. Sending the body as URLSearchParams fixes both.',
+        '',
+        '{{a|⏺}} {{b|Update}}(src/forms/signup.ts)',
+        '{{d|  ⎿  Updated src/forms/signup.ts with 1 addition and 1 removal}}',
+        '      {{d|61}} {{r|-    body: buildQuery({ email }),}}',
+        '      {{d|61}} {{g|+    body: new URLSearchParams({ email }),}}',
+        '',
+        '{{a|⏺}} {{b|Bash}}(npm test -- signup)',
+      ],
+      stream: [
+        '{{d|  ⎿  PASS  src/forms/signup.test.ts}}',
+        '{{d|       ✓ submits the form (18 ms)}}',
+        '{{d|       ✓ rejects an empty address (4 ms)}}',
+        '',
+        '{{a|⏺}} Adding a regression test for addresses with {{c|+}} and {{c|%}}.',
+        '',
+        '{{a|⏺}} {{b|Write}}(src/forms/signup.plus.test.ts)',
+        '{{d|  ⎿  Wrote 24 lines to src/forms/signup.plus.test.ts}}',
+        '',
+        '{{a|⏺}} {{b|Bash}}(npm test)',
+        '{{d|  ⎿  Tests: 49 passed, 49 total}}',
+        '',
+        '{{a|⏺}} {{b|Bash}}(git commit -am "Keep plus signs in signup emails")',
+        '{{d|  ⎿  [fix/signup-plus 3f9c2e1] Keep plus signs in signup emails}}',
+      ],
+    },
+    'w1:p8': {
+      activity: 'Deploying preview', turn: 381,
+      frame: [
+        ...codex('~/dev/website · test-site'),
+        '{{b|›}} Finalize the testing site: fix broken links, add the staging banner,',
+        '  and deploy a preview.',
+        '',
+        '{{m|•}} {{b|Ran}} {{c|npx linkinator dist --recurse}}',
+        '{{d|  └ 212 links scanned, 3 broken}}',
+        '{{d|    /pricing → /docs/limits (404)}}',
+        '{{d|    /blog/launch → /img/hero@2x.png (404)}}',
+        '{{d|    /about → https://status.example.com (timeout)}}',
+        '',
+        '{{m|•}} {{b|Edited}} src/pages/pricing.astro {{g|+1}} {{r|-1}}',
+        '{{m|•}} {{b|Edited}} src/pages/blog/launch.md {{g|+1}} {{r|-1}}',
+        '{{m|•}} {{b|Edited}} src/layouts/Base.astro {{g|+14}}',
+        '',
+      ],
+      stream: [
+        '{{m|•}} {{b|Ran}} {{c|npm run build}}',
+        '{{d|  └ built 38 pages in 4.1s}}',
+        '',
+        '{{m|•}} {{b|Ran}} {{c|npx linkinator dist --recurse}}',
+        '{{d|  └ 212 links scanned, 1 broken (status.example.com, external timeout)}}',
+        '',
+        '{{m|•}} {{b|Ran}} {{c|npm run deploy:preview}}',
+        '{{d|  └ uploading 38 pages…}}',
+        '{{d|  └ https://test-site-4f2a.preview.example.com}}',
+      ],
+    },
+    'w1:p7': {
+      frame: [
+        ...claude('~/dev/website'),
+        '{{d|>}} Move the contact and newsletter forms to the v2 API.',
+        '',
+        '{{a|⏺}} {{b|Read}}(src/api/v1/forms.ts)',
+        '{{d|  ⎿  Read 88 lines}}',
+        '',
+        '{{a|⏺}} The v2 endpoints validate bodies with zod schemas. The site does not',
+        '  depend on zod yet, so it needs installing first.',
+        '',
+        '{{a|⏺}} {{b|Bash}}(npm install zod@4)',
+        '',
+        ...box([
+          '{{b|Bash command}}',
+          '',
+          '  npm install zod@4',
+          '  {{d|Install the schema library the v2 API uses}}',
+          '',
+          'Do you want to proceed?',
+          '{{s|❯ 1. Yes}}',
+          "  2. Yes, and don't ask again for {{b|npm install}} commands",
+          '  3. No, and tell Claude what to do differently {{d|(esc)}}',
+        ], 66),
+      ],
+    },
+    'w1:p6': {
+      frame: [
+        ...claude('~/dev/website'),
+        '{{d|>}} Get the Lighthouse performance score on the home page above 90.',
+        '',
+        '{{a|⏺}} {{b|Bash}}(npx lighthouse http://localhost:4321 --quiet --output json)',
+        '{{d|  ⎿  performance 71 · accessibility 98 · best practices 100 · seo 100}}',
+        '',
+        '{{a|⏺}} Three things cost the most: the hero video loads eagerly, fonts block',
+        '  rendering, and images have no width and height.',
+        '',
+        '{{a|⏺}} {{b|Update}}(src/components/Hero.astro)',
+        '{{d|  ⎿  Updated with 3 additions and 1 removal}}',
+        '{{a|⏺}} {{b|Update}}(src/layouts/Base.astro)',
+        '{{d|  ⎿  Updated with 2 additions}}',
+        '{{a|⏺}} {{b|Update}}(src/components/Picture.astro)',
+        '{{d|  ⎿  Updated with 6 additions and 2 removals}}',
+        '',
+        '{{a|⏺}} {{b|Bash}}(npx lighthouse http://localhost:4321 --quiet --output json)',
+        '{{d|  ⎿  performance 96 · accessibility 100 · best practices 100 · seo 100}}',
+        '',
+        '{{a|⏺}} Done. Performance went from {{y|71}} to {{g|96}}. The changes are on',
+        '  {{c|perf/lighthouse}}; the numbers are in {{c|reports/lighthouse.md}}.',
+        '',
+        '{{d|✻ Worked for 14m 32s}}',
+        '',
+        '{{d|>}}',
+      ],
+    },
+    'w1:p5': {
+      frame: [
+        '{{b|opencode}}  {{d|~/dev/website}}',
+        '',
+        '{{b|you}}       Update the footer: Careers moved to /jobs, drop Press,',
+        '          and add a link to the status page.',
+        '',
+        '{{c|opencode}}  Edited {{b|src/components/Footer.astro}}',
+        '          {{r|- <a href="/careers">Careers</a>}}',
+        '          {{g|+ <a href="/jobs">Careers</a>}}',
+        '          {{r|- <a href="/press">Press</a>}}',
+        '          {{g|+ <a href="https://status.example.com">Status</a>}}',
+        '',
+        '{{c|opencode}}  The footer has five links now, and each one answers 200.',
+        '',
+        `{{d|${'─'.repeat(64)}}}`,
+        '{{d|>}}',
+      ],
+    },
+    'w1:p3': {
+      frame: [
+        '{{b|Gemini CLI}}  {{d|~/dev/website}}',
+        '',
+        '{{d|>}} Try a sidebar navigation on the docs pages, behind a flag.',
+        '',
+        '{{d|  Reading src/layouts/Docs.astro}}',
+        '{{d|  Reading src/components/Nav.astro}}',
+        '',
+        '  I will add a {{c|DOCS_SIDEBAR}} flag and render the new nav when it is on.',
+        '',
+        '{{d|  Editing src/components/Nav.astro}}',
+      ],
+    },
+    'w1:p1': {
+      frame: [
+        ...claude('~/dev/website'),
+        '{{d|>}} List images over 300 KB and convert them to AVIF.',
+        '',
+        '{{a|⏺}} Converted 14 images and saved 6.8 MB. The list is in',
+        '  {{c|reports/images.md}}.',
+        '',
+        '{{d|>}} /exit',
+        '',
+        '{{g|~/dev/website}} {{d|(main)}} $',
+      ],
+    },
+    'w2:p4': {
+      activity: 'Importing plants', turn: 96,
+      frame: [
+        ...codex('~/dev/gardener'),
+        '{{b|›}} Seed the plant catalog from data/plants.csv: dedupe by latin name,',
+        '  keep the most recent row, and write a migration.',
+        '',
+        '{{m|•}} {{b|Ran}} {{c|head -3 data/plants.csv}}',
+        '{{d|  └ latin_name,common_name,spacing_cm,sun,updated_at}}',
+        '{{d|    Solanum lycopersicum,Tomato,45,full,2026-08-02}}',
+        '{{d|    Ocimum basilicum,Basil,25,full,2026-07-19}}',
+        '',
+        '{{m|•}} {{b|Ran}} {{c|wc -l data/plants.csv}}',
+        '{{d|  └ 1284 data/plants.csv}}',
+        '',
+      ],
+      stream: [
+        '{{m|•}} {{b|Edited}} db/migrations/0007_seed_plants.sql {{g|+1196}}',
+        '{{m|•}} {{b|Ran}} {{c|npm run db:migrate}}',
+        '{{d|  └ applied 0007_seed_plants (1196 plants, 87 duplicates dropped)}}',
+        '',
+        '{{m|•}} {{b|Ran}} {{c|npm test -- catalog}}',
+        '{{d|  └ 12 passed}}',
+      ],
+    },
+    'w2:p3': {
+      frame: [
+        ...claude('~/dev/gardener'),
+        '{{d|>}} Build the gardening rows view: one row per bed, plants in planting order.',
+        '',
+        '{{a|⏺}} {{b|Write}}(src/views/Rows.tsx)',
+        '{{d|  ⎿  Wrote 118 lines}}',
+        '{{a|⏺}} {{b|Write}}(src/views/Rows.test.tsx)',
+        '{{d|  ⎿  Wrote 46 lines}}',
+        '{{a|⏺}} {{b|Bash}}(npm test -- Rows)',
+        '{{d|  ⎿  Tests: 6 passed, 6 total}}',
+        '',
+        '{{a|⏺}} The rows view is at {{c|/beds/:id/rows}}. A bed with no plants shows an',
+        '  empty row with a "Plan this bed" hint.',
+        '',
+        '{{d|✻ Worked for 9m 03s}}',
+        '',
+        '{{d|>}}',
+      ],
+    },
+    'w2:p1': {
+      frame: [
+        ...claude('~/dev/gardener'),
+        '{{d|>}} Add tests for the watering schedule around daylight saving changes.',
+        '',
+        '{{a|⏺}} {{b|Bash}}(npm test -- watering)',
+        '{{d|  ⎿  Tests: 14 passed, 14 total}}',
+        '',
+        '{{a|⏺}} Added 5 tests: the spring and autumn changes in two time zones, and a',
+        '  schedule that starts on the change itself. All pass.',
+        '',
+        '{{d|>}}',
+      ],
+    },
+    'w3:p1': {
+      frame: [
+        ...claude('~/dev/browser'),
+        '{{d|>}} Profile cold startup and list the three slowest steps.',
+        '',
+        '{{a|⏺}} {{b|Bash}}(./scripts/trace-startup.sh --runs 5)',
+        '{{d|  ⎿  median 812 ms over 5 runs}}',
+        '',
+        '{{a|⏺}} Slowest steps, median of 5 runs:',
+        '  1. {{b|Extension host}}      {{y|318 ms}}  loads every extension before first paint',
+        '  2. {{b|Session restore}}     {{y|204 ms}}  reads every tab\'s history synchronously',
+        '  3. {{b|Font cache warm-up}}  {{y| 97 ms}}',
+        '',
+        '  Details and traces are in {{c|reports/startup.md}}.',
+        '',
+        '{{d|✻ Worked for 21m 40s}}',
+        '',
+        '{{d|>}}',
+      ],
+    },
+    'w3:p2': {
+      frame: [
+        ...claude('~/dev/browser'),
+        ...box([
+          '{{b|Do you trust the files in this folder?}}',
+          '',
+          '{{d|~/dev/browser}}',
+          '',
+          'Claude Code may read, write or run files in this folder.',
+          '',
+          '{{s|❯ 1. Yes, proceed}}',
+          '  2. No, exit',
+        ], 64),
+        '',
+        '{{d|  Enter to confirm · Esc to exit}}',
+      ],
+    },
+  };
+
+  const STATUS = {
+    working:     { label: 'Working',   pill: 'Working',           icon: 'spin' },
+    blocked:     { label: 'Blocked',   pill: 'Blocked',           icon: 'amber' },
+    done:        { label: 'Done',      pill: 'Done',              icon: 'blue', time: true },
+    idle:        { label: 'Idle',      pill: 'Idle',              icon: 'grey', time: true },
+    unknown:     { label: 'Unknown',   pill: 'Unknown',           icon: 'ring' },
+    exited:      { label: 'Exited',    pill: 'Exited',            icon: 'ring' },
+    missing:     { label: 'Not found', pill: 'Not in Herdr',      icon: 'dash' },
+    unreachable: { label: '—',         pill: 'Herdr unreachable', icon: 'none' },
+  };
+  const NOTES = {
+    blocked: ['warn', 'Waiting on you. Answer it in Herdr; the web is read-only.'],
+    unknown: ['', "Herdr can't tell what this agent is doing."],
+    exited: ['', 'The agent has exited. Its pane is still open.'],
+  };
+
+  const SPINNER = `<svg class="spinner" viewBox="0 0 16 16" aria-hidden="true">${Array.from({ length: 8 }, (_, i) =>
+    `<line x1="8" y1="1.8" x2="8" y2="4.6" transform="rotate(${i * 45} 8 8)" opacity="${(0.22 + i * 0.11).toFixed(2)}"/>`).join('')}</svg>`;
+  const COPY = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="5.5" y="5.5" width="8" height="8" rx="1.8"/><path d="M10.5 3.2A1.7 1.7 0 0 0 8.9 2H4a2 2 0 0 0-2 2v4.9a1.7 1.7 0 0 0 1.2 1.6"/></svg>';
+  const EYE = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8Z"/><circle cx="8" cy="8" r="2"/></svg>';
+  const TERMINAL = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="11" rx="2"/><path d="m4.5 6.5 2 1.5-2 1.5M8.5 10h3"/></svg>';
+  const FOLDER = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 4.5a1.5 1.5 0 0 1 1.5-1.5h3l1.5 1.5H13a1.5 1.5 0 0 1 1.5 1.5v5.5A1.5 1.5 0 0 1 13 13H3a1.5 1.5 0 0 1-1.5-1.5v-7Z"/></svg>';
+  const SPIN_CHARS = ['·', '✢', '✳', '✶', '✻', '✽', '✻', '✶', '✳', '✢'];
+  const PALETTE = [['#d25a24', '#fbe6da'], ['#2f6bff', '#e5ecff'], ['#18916a', '#dcf2e9'], ['#8650e6', '#ede4fd'], ['#c07d0c', '#f9edd6']];
+
+  const $ = s => document.querySelector(s);
+  const els = { projects: $('#projects'), coord: $('#coordinator'), detail: $('#detail'), conn: $('#conn'), banner: $('#banner'), toast: $('#toast'), panel: $('#proto-panel') };
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const ansi = line => esc(line).replace(TOKEN, (_, k, t) => `<span class="t-${k}">${t}</span>`);
+  const since = iso => Math.max(0, Date.now() - Date.parse(iso));
+  const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+  function short(iso) {
+    const m = Math.floor(since(iso) / MIN);
+    if (m < 1) return 'now';
+    if (m < 60) return m + 'm';
+    const h = Math.floor(m / 60);
+    return h < 24 ? h + 'h' : Math.floor(h / 24) + 'd';
+  }
+  function long(iso) {
+    const m = Math.floor(since(iso) / MIN);
+    if (m < 1) return 'just now';
+    if (m < 60) return plural(m, 'minute') + ' ago';
+    const h = Math.floor(m / 60);
+    return (h < 24 ? plural(h, 'hour') : plural(Math.floor(h / 24), 'day')) + ' ago';
+  }
+  const duration = s => s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, '0')}s`;
+  const tildify = p => p.startsWith(HOME) ? '~' + p.slice(HOME.length) : p;
+  const dateOf = iso => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const humanize = name => name.replace(/[-_]+/g, ' ').replace(/^./, c => c.toUpperCase());
+  const mono = (p, big) => {
+    const [fg, bg] = PALETTE[(p.id - 1) % PALETTE.length];
+    return `<span class="mono${big ? ' mono-lg' : ''}" style="color:${fg};background:${bg}" aria-hidden="true">${esc(p.name[0])}</span>`;
+  };
+  const statusIcon = st => {
+    const k = STATUS[st].icon;
+    return `<span class="si" aria-hidden="true">${k === 'spin' ? SPINNER : k === 'none' ? '' : `<i class="si-${k}"></i>`}</span>`;
+  };
+
+  let db, herdr, buffers, streamed, closed, state;
+  const lastTitle = new Map();
+
+  function reset() {
+    db = seedDb();
+    herdr = seedHerdr();
+    buffers = new Map(Object.entries(SCRIPTS).map(([pane, s]) => [pane, s.frame.slice()]));
+    streamed = new Map();
+    closed = new Set();
+    lastTitle.clear();
+    state = { projectId: null, runId: null, folded: false, showAll: new Set(), herdrUp: true, empty: false, connecting: null };
+  }
+
+  const projects = () => state.empty ? [] : db.projects.slice().sort((a, b) => a.created_at.localeCompare(b.created_at));
+  const runsOf = pid => db.runs.filter(r => r.project_id === pid).sort((a, b) => b.started_at.localeCompare(a.started_at));
+  const currentProject = () => projects().find(p => p.id === state.projectId) || null;
+  const currentRun = () => (state.runId && db.runs.find(r => r.id === state.runId)) || null;
+
+  function live(run) {
+    if (!state.herdrUp) return { state: 'unreachable' };
+    const pane = herdr[run.herdr_pane_id];
+    if (!pane) return { state: 'missing' };
+    if (!pane.agent) return { state: 'exited', tab_label: pane.tab_label };
+    return { state: pane.agent.status, tab_label: pane.tab_label, name: pane.agent.name, kind: pane.agent.kind };
+  }
+  function titleOf(run, l) {
+    if (l.state === 'unreachable') return lastTitle.get(run.id) || `Agent #${run.id}`;
+    const title = l.tab_label || (l.name && humanize(l.name)) || `Agent #${run.id}`;
+    lastTitle.set(run.id, title);
+    return title;
+  }
+
+  const hashFor = (pid, rid) => pid ? `#/projects/${pid}${rid ? `/agents/${rid}` : ''}` : '#/';
+  const go = (pid, rid) => {
+    const h = hashFor(pid, rid);
+    if (location.hash === h) applyRoute(); else location.hash = h;
+  };
+
+  function applyRoute() {
+    const m = location.hash.match(/^#\/projects\/(\d+)(?:\/agents\/(\d+))?\/?$/);
+    const list = projects();
+    const asked = m && list.find(p => p.id === Number(m[1]));
+    const p = asked || list[0] || null;
+    const r = asked && m[2] ? db.runs.find(x => x.id === Number(m[2]) && x.project_id === p.id) || null : null;
+    if (!p || p.id !== state.projectId || r) state.folded = false;
+    if (r && r.id !== state.runId) connect(r);
+    state.projectId = p ? p.id : null;
+    state.runId = r ? r.id : null;
+    const want = hashFor(state.projectId, state.runId);
+    if (location.hash !== want) history.replaceState(null, '', want);
+    render();
+  }
+
+  function connect(r) {
+    state.connecting = r.id;
+    clearTimeout(connect.timer);
+    connect.timer = setTimeout(() => {
+      state.connecting = null;
+      if (state.runId === r.id) renderTerminal();
+    }, 450);
+  }
+
+  function keepFocus(fn) {
+    const key = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.key : null;
+    fn();
+    if (key) {
+      const el = document.querySelector(`[data-key="${key}"]`);
+      if (el) el.focus({ preventScroll: true });
+    }
+  }
+  const render = () => keepFocus(() => { renderChrome(); renderSidebar(); renderCoordinator(); renderDetail(); });
+
+  function renderChrome() {
+    els.banner.hidden = state.herdrUp;
+    els.conn.innerHTML = state.herdrUp
+      ? '<span class="conn"></span>Herdr connected'
+      : '<span class="conn bad"></span>Herdr unreachable';
+    const r = currentRun();
+    const pane = r && state.herdrUp ? herdr[r.herdr_pane_id] : null;
+    els.panel.querySelector('[data-act="cycle"]').disabled = !(pane && pane.agent);
+    els.panel.querySelector('[data-act="close"]').disabled = !pane;
+    els.panel.querySelector('[name="herdr"]').checked = !state.herdrUp;
+    els.panel.querySelector('[name="empty"]').checked = state.empty;
+  }
+
+  function renderSidebar() {
+    const list = projects();
+    if (!list.length) {
+      els.projects.innerHTML = '<li class="side-empty">No projects yet</li>';
+      return;
+    }
+    els.projects.innerHTML = list.map(p => {
+      const runs = runsOf(p.id);
+      const selected = p.id === state.projectId;
+      const open = selected && !state.folded;
+      const blocked = runs.some(r => live(r).state === 'blocked');
+      const label = `${p.name}, ${plural(runs.length, 'agent')}${blocked ? ', an agent is blocked' : ''}`;
+      return `<li>
+        <button class="project-row${selected ? ' is-selected' : ''}" data-key="p-${p.id}" data-project="${p.id}"
+          aria-expanded="${open}"${selected ? ' aria-current="true"' : ''} aria-label="${esc(label)}">
+          ${mono(p)}<span class="row-name">${esc(p.name)}</span>
+          ${blocked ? '<span class="attn" title="An agent is blocked"></span>' : ''}
+          <span class="badge" title="${plural(runs.length, 'agent')}">${runs.length}</span>
+        </button>
+        ${open ? agentList(p, runs) : ''}
+      </li>`;
+    }).join('');
+  }
+
+  function agentList(p, runs) {
+    if (!runs.length) return '<ul><li class="agent-empty">No agents yet</li></ul>';
+    const forced = runs.findIndex(r => r.id === state.runId) >= LIMIT;
+    const all = forced || state.showAll.has(p.id);
+    const rows = (all ? runs : runs.slice(0, LIMIT)).map(agentRow).join('');
+    const more = runs.length > LIMIT && !forced
+      ? `<li><button class="more" data-key="more-${p.id}" data-more="${p.id}">${all ? 'Show fewer' : `Show ${runs.length - LIMIT} more`}</button></li>`
+      : '';
+    return `<ul>${rows}${more}</ul>`;
+  }
+
+  function agentRow(r) {
+    const l = live(r), s = STATUS[l.state], title = titleOf(r, l);
+    const selected = r.id === state.runId;
+    const right = s.time
+      ? `<span class="when" data-short="${r.started_at}">${short(r.started_at)}</span>`
+      : `<span class="when">${s.label}</span>`;
+    const tip = `${s.pill} · started ${long(r.started_at)}`;
+    return `<li>
+      <button class="agent-row st-${l.state}${selected ? ' is-selected' : ''}" data-key="a-${r.id}" data-project="${r.project_id}" data-run="${r.id}"
+        ${selected ? 'aria-current="true"' : ''} title="${esc(tip)}" aria-label="${esc(`${title}, ${tip}`)}">
+        ${statusIcon(l.state)}<span class="row-name">${esc(title)}</span>${right}
+      </button>
+    </li>`;
+  }
+
+  function summary(runs) {
+    if (!runs.length) return 'No agents yet';
+    const n = plural(runs.length, 'agent');
+    if (!state.herdrUp) return `${n} · statuses unavailable`;
+    const counts = {};
+    runs.forEach(r => { const st = live(r).state; counts[st] = (counts[st] || 0) + 1; });
+    return [n, ...['working', 'blocked', 'done', 'idle'].filter(st => counts[st]).map(st =>
+      st === 'blocked' ? `<span class="sum-blocked">${counts[st]} blocked</span>` : `${counts[st]} ${st}`)].join(' · ');
+  }
+
+  const emptyState = (icon, title, text) =>
+    `<div class="empty"><div class="empty-box"><div class="empty-icon">${icon}</div><h3>${title}</h3><p>${text}</p></div></div>`;
+
+  function renderCoordinator() {
+    const p = currentProject();
+    if (!p) {
+      els.coord.innerHTML = `<header class="col-head"><span class="col-title muted">Coordinator</span></header>
+        ${emptyState(FOLDER, 'No projects yet', "They appear here when the Coordinator's command line creates them.")}`;
+      return;
+    }
+    const runs = runsOf(p.id);
+    els.coord.innerHTML = `
+      <header class="col-head">
+        <div class="col-title">${mono(p)}<span>${esc(p.name)}</span></div>
+        <span class="col-tag">Coordinator</span>
+      </header>
+      <div class="coord-body">
+        <div class="hero">
+          ${mono(p, true)}
+          <h2>${esc(p.name)}</h2>
+          <p class="path">${esc(tildify(p.path))}</p>
+          <p class="summary">${summary(runs)}</p>
+        </div>
+        <div class="note">
+          <h3>No Coordinator chat in v0</h3>
+          <p>Start and steer agents from the command line or the Herdr TUI; this page shows what they are doing.</p>
+        </div>
+        <p class="facts-title">Details</p>
+        <dl class="facts">
+          <dt>Path</dt><dd><code>${esc(tildify(p.path))}</code></dd>
+          <dt>Herdr workspace</dt><dd><code>${esc(p.herdr_workspace_id)}</code></dd>
+          <dt>Created</dt><dd>${dateOf(p.created_at)}</dd>
+          <dt>Agents</dt><dd>${runs.length}${runs.length ? `, newest started <span data-long="${runs[0].started_at}">${long(runs[0].started_at)}</span>` : ''}</dd>
+        </dl>
+      </div>
+      <footer class="coord-foot">${EYE}Observe-only · steer from Herdr</footer>`;
+  }
+
+  function renderDetail() {
+    const p = currentProject();
+    const r = currentRun();
+    if (!r) {
+      const hasAgents = p && runsOf(p.id).length > 0;
+      els.detail.innerHTML = `<header class="col-head"><span class="col-title muted">Agent</span></header>` + (
+        !p ? emptyState(TERMINAL, 'Nothing to watch yet', 'Agents show up here once a project has some.')
+        : hasAgents ? emptyState(TERMINAL, 'Select an agent to watch its terminal.', 'Status and output come live from Herdr. Read-only.')
+        : emptyState(TERMINAL, 'No agents yet', 'Agents appear here when the Coordinator starts them.'));
+      return;
+    }
+    const l = live(r), s = STATUS[l.state], title = titleOf(r, l);
+    const facts = [];
+    if (l.name) facts.push(`<code>${esc(l.name)}</code>`);
+    if (l.kind) facts.push(esc(l.kind));
+    facts.push(`<span>pane <code>${esc(r.herdr_pane_id)}</code><button class="copy" data-key="copy" data-copy="${esc(r.herdr_pane_id)}" title="Copy pane id" aria-label="Copy pane id ${esc(r.herdr_pane_id)}">${COPY}</button></span>`);
+    facts.push(`<span>started <span data-long="${r.started_at}">${long(r.started_at)}</span></span>`);
+    const note = NOTES[l.state];
+    els.detail.innerHTML = `
+      <header class="col-head">
+        <h2>${esc(title)}</h2>
+        <span class="pill st-${l.state}">${s.icon === 'none' ? '' : statusIcon(l.state)}${s.pill}</span>
+      </header>
+      <div class="detail-meta">
+        <p class="meta-line">${facts.join('<span class="sep" aria-hidden="true">·</span>')}</p>
+        ${note ? `<p class="callout ${note[0]}">${note[1]}</p>` : ''}
+      </div>
+      <div class="term" id="term">
+        <div class="term-screen" id="term-screen" tabindex="0" role="log" aria-label="${esc(`Terminal of ${title}, read-only`)}"><pre id="term-pre"></pre></div>
+        <div class="term-overlay" id="term-overlay" hidden><div></div></div>
+        <div class="term-bar"><span id="term-stream"></span><span>Read-only</span><span class="term-size" id="term-size"></span></div>
+      </div>`;
+    renderTerminal();
+  }
+
+  function termState(r) {
+    if (!state.herdrUp) return 'reconnecting';
+    if (closed.has(r.herdr_pane_id)) return 'closed';
+    if (!herdr[r.herdr_pane_id]) return 'none';
+    if (state.connecting === r.id) return 'connecting';
+    return 'live';
+  }
+  const isWorking = r => { const pane = herdr[r.herdr_pane_id]; return !!(pane && pane.agent && pane.agent.status === 'working'); };
+
+  function renderTerminal() {
+    const r = currentRun(), pre = $('#term-pre');
+    if (!r || !pre) return;
+    const ts = termState(r);
+    const lines = ts === 'connecting' || ts === 'none' ? [] : buffers.get(r.herdr_pane_id) || [];
+    pre.innerHTML = `<span id="term-lines">${lines.map(ansi).join('\n')}</span>` +
+      (ts === 'live' && isWorking(r) ? '\n<span id="term-status" class="t-a"></span>' : '');
+    tickStatusLine();
+    $('#term').classList.toggle('is-dim', ts === 'reconnecting' || ts === 'closed');
+    const message = {
+      connecting: `Connecting to ${r.herdr_pane_id}…`,
+      reconnecting: 'Reconnecting…',
+      closed: 'The pane closed.',
+      none: 'This pane is no longer in Herdr.',
+    }[ts];
+    const overlay = $('#term-overlay');
+    overlay.hidden = !message;
+    overlay.firstElementChild.textContent = message || '';
+    $('#term-stream').innerHTML = {
+      live: '<i class="live-dot"></i>Live', connecting: 'Connecting…', reconnecting: 'Reconnecting…', closed: 'Closed', none: 'No stream',
+    }[ts];
+    const screen = $('#term-screen');
+    screen.scrollTop = screen.scrollHeight;
+    measure();
+  }
+
+  function appendLine(line) {
+    const target = $('#term-lines'), screen = $('#term-screen');
+    if (!target) return;
+    const atBottom = screen.scrollHeight - screen.scrollTop - screen.clientHeight < 32;
+    target.insertAdjacentHTML('beforeend', (target.textContent ? '\n' : '') + ansi(line));
+    if (atBottom) screen.scrollTop = screen.scrollHeight;
+  }
+
+  let spinIndex = 0;
+  function tickStatusLine() {
+    const el = $('#term-status'), r = currentRun();
+    const script = r && SCRIPTS[r.herdr_pane_id];
+    if (!el || !script) return;
+    const secs = Math.floor((Date.now() - T0) / 1000) + (script.turn || 0);
+    el.textContent = `${SPIN_CHARS[spinIndex % SPIN_CHARS.length]} ${script.activity || 'Working'}… (${duration(secs)})`;
+  }
+
+  let probe;
+  function measure() {
+    const screen = $('#term-screen'), pre = $('#term-pre'), out = $('#term-size');
+    if (!screen || !pre || !out) return;
+    probe = probe || Object.assign(document.createElement('span'), { textContent: 'M'.repeat(20) });
+    probe.style.cssText = 'position:absolute;visibility:hidden;white-space:pre';
+    pre.appendChild(probe);
+    const charWidth = probe.getBoundingClientRect().width / 20;
+    pre.removeChild(probe);
+    const cs = getComputedStyle(pre);
+    const width = screen.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    const height = screen.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+    out.textContent = `${Math.max(1, Math.floor(width / charWidth))}×${Math.max(1, Math.floor(height / parseFloat(cs.lineHeight)))}`;
+  }
+
+  function toast(message) {
+    els.toast.textContent = message;
+    els.toast.classList.add('show');
+    clearTimeout(toast.timer);
+    toast.timer = setTimeout(() => els.toast.classList.remove('show'), 2200);
+  }
+  const readOnly = () => toast('Read-only. Type into this agent from Herdr.');
+
+  function copyText(text) {
+    const fallback = () => new Promise((resolve, reject) => {
+      const ta = Object.assign(document.createElement('textarea'), { value: text });
+      ta.style.cssText = 'position:fixed;opacity:0';
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand('copy');
+      ta.remove();
+      ok ? resolve() : reject();
+    });
+    return navigator.clipboard ? navigator.clipboard.writeText(text).catch(fallback) : fallback();
+  }
+
+  els.projects.addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    if (b.dataset.more) {
+      const id = Number(b.dataset.more);
+      state.showAll.has(id) ? state.showAll.delete(id) : state.showAll.add(id);
+      keepFocus(renderSidebar);
+    } else if (b.dataset.run) {
+      go(Number(b.dataset.project), Number(b.dataset.run));
+    } else if (b.dataset.project) {
+      const id = Number(b.dataset.project);
+      if (id === state.projectId) {
+        state.folded = !state.folded;
+        keepFocus(renderSidebar);
+      } else {
+        go(id, null);
+      }
+    }
+  });
+
+  els.projects.addEventListener('keydown', e => {
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return;
+    const items = [...els.projects.querySelectorAll('button')];
+    const i = items.indexOf(document.activeElement);
+    if (i < 0) return;
+    e.preventDefault();
+    const j = e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1
+      : Math.min(items.length - 1, Math.max(0, i + (e.key === 'ArrowDown' ? 1 : -1)));
+    items[j].focus();
+  });
+
+  els.detail.addEventListener('click', e => {
+    const b = e.target.closest('[data-copy]');
+    if (b) copyText(b.dataset.copy).then(() => toast(`Copied ${b.dataset.copy}`), () => toast('Copy failed'));
+  });
+
+  const PASS_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End', 'Tab', 'Escape', 'Shift', 'Control', 'Alt', 'Meta', 'CapsLock'];
+  els.detail.addEventListener('keydown', e => {
+    if (!e.target.closest('#term-screen') || PASS_KEYS.includes(e.key)) return;
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'c') return;
+    e.preventDefault();
+    readOnly();
+  });
+  els.detail.addEventListener('paste', e => {
+    if (!e.target.closest('#term-screen')) return;
+    e.preventDefault();
+    readOnly();
+  });
+
+  $('#proto-toggle').addEventListener('click', () => {
+    els.panel.hidden = !els.panel.hidden;
+    $('#proto-toggle').setAttribute('aria-expanded', String(!els.panel.hidden));
+  });
+  document.addEventListener('click', e => {
+    if (!els.panel.hidden && !e.target.closest('.side-foot')) {
+      els.panel.hidden = true;
+      $('#proto-toggle').setAttribute('aria-expanded', 'false');
+    }
+  });
+  els.panel.addEventListener('click', e => {
+    const b = e.target.closest('button[data-act]');
+    if (!b || b.disabled) return;
+    const r = currentRun();
+    if (b.dataset.act === 'cycle' && r) {
+      const agent = herdr[r.herdr_pane_id].agent;
+      const from = agent.status;
+      agent.status = CYCLE[(CYCLE.indexOf(from) + 1) % CYCLE.length];
+      render();
+      toast(`Herdr: ${agent.name} ${from} → ${agent.status}`);
+    } else if (b.dataset.act === 'close' && r) {
+      delete herdr[r.herdr_pane_id];
+      closed.add(r.herdr_pane_id);
+      render();
+      toast(`Herdr: terminal.closed for ${r.herdr_pane_id}`);
+    } else if (b.dataset.act === 'reset') {
+      reset();
+      applyRoute();
+      toast('Mock data reset');
+    }
+  });
+  els.panel.addEventListener('change', e => {
+    if (e.target.name === 'herdr') {
+      state.herdrUp = !e.target.checked;
+      const r = currentRun();
+      if (state.herdrUp && r) connect(r);
+      render();
+    } else if (e.target.name === 'empty') {
+      state.empty = e.target.checked;
+      applyRoute();
+    }
+  });
+
+  window.addEventListener('hashchange', applyRoute);
+  new ResizeObserver(measure).observe(els.detail);
+
+  setInterval(() => {
+    if (!state.herdrUp) return;
+    for (const [pane, script] of Object.entries(SCRIPTS)) {
+      const agent = herdr[pane] && herdr[pane].agent;
+      if (!agent || agent.status !== 'working' || !script.stream) continue;
+      const i = streamed.get(pane) || 0;
+      if (i >= script.stream.length) continue;
+      streamed.set(pane, i + 1);
+      buffers.get(pane).push(script.stream[i]);
+      const r = currentRun();
+      if (r && r.herdr_pane_id === pane && termState(r) === 'live') appendLine(script.stream[i]);
+    }
+  }, 2600);
+
+  setInterval(() => {
+    if (!reducedMotion) spinIndex++;
+    tickStatusLine();
+  }, 160);
+
+  setInterval(() => {
+    document.querySelectorAll('[data-short]').forEach(el => { el.textContent = short(el.dataset.short); });
+    document.querySelectorAll('[data-long]').forEach(el => { el.textContent = long(el.dataset.long); });
+  }, 20000);
+
+  reset();
+  applyRoute();
+})();
+</script>
+</body>
+</html>
