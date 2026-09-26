@@ -101,9 +101,39 @@ An id that does not exist falls back to the level above it.
 ```
 
 - Widths: the left column is fixed at about 264 px and the centre at about 380 px. The right column takes the rest, because a terminal needs at least 80 columns.
-- Every column has a header of the same height, so the three read as one window.
+- Each column is its own glass pane, and their headers share one height, so the three read as one window.
 - Desktop first. Below about 1,100 px the centre column is hidden. There is no phone layout in v0.
-- Light theme only: warm off-white panels, thin warm-grey borders, grey secondary text, one blue accent, amber for what needs you.
+- One light theme, described next.
+
+### Visual direction
+
+The skin blends two references and borrows one small thing from a third. It changes only the look; the layout, states and behaviour in this plan stay as they are.
+
+- **[Frutiger Aero](https://en.wikipedia.org/wiki/Frutiger_Aero) materials set the mood.** A calm sky-to-aqua wallpaper with a faint aurora, a leaf-green horizon, a few soap bubbles and light noise. Glass, gloss and soft gradients in cyan, teal, sky and leaf green.
+- **[Windows 7 Aero](https://en.wikipedia.org/wiki/Windows_Aero) chrome is the specimen.** Each column is a frosted translucent pane (backdrop blur over translucent white) with a 1 px bright rim, a soft inner highlight and a soft shadow, rounded at 14 px. Wallpaper shows in the gaps between panes instead of grey dividers. Column headers are glossy strips, and a seam inside a pane is a teal hairline over a white highlight. One humanist sans throughout: Segoe UI, then Inter or the system font.
+- **One [88×31](https://indieweb.org/88x31) button**, "Herdr · observe only", sits in the Coordinator's footer. It is the only piece of the personal-web layer.
+
+| Element | Treatment |
+| --- | --- |
+| Status pill | A gel capsule, a glossy top half over a tinted body: working aqua and teal, blocked warm amber, done soft green, idle and the other quiet states frosted grey. The word is always in the capsule. |
+| Row icons | Glossy orbs in the same colours, a teal spinner, a hollow ring, a dash |
+| Live | A small glossy green gel in the terminal footer |
+| Blocked | An amber glass line under the detail header |
+| Unreachable | A muted orange glass banner across the centre and right panes |
+| Selection | Brighter glass with a cyan rim, strongest on the selected Agent and softer on its project. Never a flat blue fill. |
+| Coordinator note | A softer frosted card |
+| Terminal | A dark glass inset with light text. Monospace is used here and nowhere else, and logs never sit on the wallpaper. |
+
+- Text meets WCAG AA contrast on the glass: the panes are opaque enough that the wallpaper never decides whether text is readable. The one exception is the dimmed last frame of a terminal that is reconnecting or closed.
+- Motion is limited to 150–300 ms ease-out fades and highlights, with no bounce. Under reduced motion nothing animates, the spinner included.
+- Not used: a Start orb, caption buttons, Flip 3D, GeoCities density, glitter tiles, marquees, background music, Nightcore or anime imagery, Y2K liquid metal.
+
+Tokens:
+
+```css
+--sky: #cfefff;   --aqua: #7ec8e3;   --teal: #3aa6a0;   --leaf: #7cbc6e;
+--glass: rgba(255, 255, 255, .55);   --ink: #1a2a33;   --blocked: #e8a05c;   --live: #3cba6f;
+```
 
 ## Screens
 
@@ -189,9 +219,9 @@ Herdr is the only source. Rows, the project summary and the detail pill show wha
 
 | State | From | Row icon | Row, right side | Detail pill |
 | --- | --- | --- | --- | --- |
-| `working` | Herdr | spinner | Working | Working |
+| `working` | Herdr | teal spinner | Working | Working |
 | `blocked` | Herdr | amber dot | Blocked | Blocked |
-| `done` | Herdr | blue dot | time, such as `2h` | Done |
+| `done` | Herdr | green dot | time, such as `2h` | Done |
 | `idle` | Herdr | grey dot | time | Idle |
 | `unknown` | Herdr | hollow circle | Unknown | Unknown |
 | Exited | UI: the pane is there, but no agent runs in it | hollow circle | Exited | Exited |
@@ -261,4 +291,4 @@ What is fake:
 
 ## Where the patterns come from
 
-The layout follows [Cursor Projects](https://cursor.com/docs/agent/projects): a Projects list in the left column with the Agents under each project, the Coordinator for the selected project, and a detail column for one Agent, like the terminal column of Cursor's web agent dashboard. Taken: the hierarchy, the names, the row shape (a status word while working, a time otherwise) and status on the detail. Left out: everything under [Out of scope](#out-of-scope-for-v0).
+The layout follows [Cursor Projects](https://cursor.com/docs/agent/projects): a Projects list in the left column with the Agents under each project, the Coordinator for the selected project, and a detail column for one Agent, like the terminal column of Cursor's web agent dashboard. Taken: the hierarchy, the names, the row shape (a status word while working, a time otherwise) and status on the detail. Left out: everything under [Out of scope](#out-of-scope-for-v0). The look does not come from Cursor; see [Visual direction](#visual-direction).
