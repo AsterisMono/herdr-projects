@@ -283,7 +283,7 @@ What is fake:
 
 ## Open questions
 
-1. **Pane ids come back after a Herdr server restart.** Herdr numbers workspaces and panes from `w1` again after a restart ([`herdr-notes.md`](herdr-notes.md)), so a stored `herdr_pane_id` can name a different pane. The plugin guards against this with an identity check (ids, working directory and agent name). With only the pane id stored, v0 needs a rule before it is built, for example comparing the pane's working directory with `projects.path` and showing "Not in Herdr" when they differ.
+1. **Pane ids come back after a Herdr server restart. Deferred; a known risk in v0.** Herdr numbers workspaces and panes from `w1` again after a restart ([`herdr-notes.md`](herdr-notes.md)), so a stored `herdr_pane_id` can name a different pane. An Agent's row can then show another pane's status and terminal. The plugin guards against this with an identity check (ids, working directory and agent name); v0 does not. Rematching is deferred entirely: v0 adds no rule and no column for it, and the schema stays as locked.
 2. **The time on done and idle rows.** v0 uses `started_at`. If Herdr's status-change events carry a time, the time since the last change would match what people expect better. It would be held in memory only, never in SQLite.
 3. **Titles.** A readable title depends on the Coordinator labelling each Agent's tab, or naming its agent, when it creates it. Once the tab is closed only `Agent #<run id>` is left.
 4. **Creating from the web.** Out of scope now. If it comes, it follows the same lifecycle as the command line: insert the row, create in Herdr, write the id back, delete the row if Herdr fails.
