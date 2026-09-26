@@ -180,3 +180,5 @@ HERDR_CONFIG_PATH=<copy> ...     # point configure and `herdr config check` at a
 ```
 
 Never develop against your default session, `~/.herdr-projects` or your real `config.toml`. [`herdr-notes.md`](herdr-notes.md) records what was verified about Herdr, and [`manual-test.md`](manual-test.md) lists the acceptance checks, including the visual ones only a person can confirm.
+
+[`ui-plan-v0.md`](ui-plan-v0.md) plans a separate local web dashboard for watching Herdr agents. It is not built yet; [`prototypes/ui-v0.html`](prototypes/ui-v0.html) is a clickable prototype with mock data that opens in a browser.
