@@ -127,7 +127,7 @@ Agent row, nested under its project:
 
 An Agent's title, first match wins, all read live from Herdr:
 
-1. The label of the Agent's tab, when the Coordinator set one when it created the tab.
+1. The label of the Agent's tab, if the Coordinator set one when it created the tab.
 2. The Herdr agent name, written as words: `fix-bug-report` becomes "Fix bug report".
 3. `Agent #<run id>`, when Herdr no longer has the pane.
 
